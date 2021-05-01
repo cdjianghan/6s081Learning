@@ -100,6 +100,9 @@ test1()
     // occurred; another is that that registers may not be
     // restored correctly, causing i or j or the address ofj
     // to get an incorrect value.
+    // 循环应该调用foo（）i次，foo（）应该在每次调用中增加j一次，因此j应该等于i。
+    // 错误的一个可能来源是处理程序可能返回的位置不是发生计时器中断的位置；
+    // 另一个原因是寄存器可能无法正确还原，导致i或j或j的地址获得不正确的值。
     printf("\ntest1 failed: foo() executed fewer times than it was called\n");
   } else {
     printf("test1 passed\n");
