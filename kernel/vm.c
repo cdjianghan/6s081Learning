@@ -95,6 +95,21 @@ walk(pagetable_t pagetable, uint64 va, int alloc)
 uint64
 walkaddr(pagetable_t pagetable, uint64 va)
 {
+  // pte_t *pte;
+  // uint64 pa;
+
+  // if(va >= MAXVA)
+  //   return 0;
+
+  // pte = walk(pagetable, va, 0);
+  // if(pte == 0)
+  //   return 0;
+  // if((*pte & PTE_V) == 0)
+  //   return 0;
+  // if((*pte & PTE_U) == 0)
+  //   return 0;
+  // pa = PTE2PA(*pte);
+  // return pa;
   pte_t *pte;
   uint64 pa;
 
@@ -102,10 +117,24 @@ walkaddr(pagetable_t pagetable, uint64 va)
     return 0;
 
   pte = walk(pagetable, va, 0);
-  if(pte == 0)
-    return 0;
-  if((*pte & PTE_V) == 0)
-    return 0;
+  // if(pte == 0)
+  //   return 0;
+  if(pte == 0||(*pte & PTE_V) == 0)
+    {
+      struct proc * p = myproc();
+      if(va >= p->sz || va < p->trapframe->sp){
+        return 0;
+      }
+      uint64 mem = (uint64) kalloc();
+      if(mem == 0)return 0;
+      memset((void *)mem,0,PGSIZE);
+      va = PGROUNDDOWN(va);
+      if(mappages(p->pagetable,va,PGSIZE,mem,PTE_X|PTE_W|PTE_U|PTE_R) != 0){
+        kfree((void *)mem);
+        return 0;
+      }
+      return mem;
+    }
   if((*pte & PTE_U) == 0)
     return 0;
   pa = PTE2PA(*pte);
