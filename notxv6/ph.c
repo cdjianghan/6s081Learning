@@ -8,6 +8,9 @@
 #define NBUCKET 5
 #define NKEYS 100000
 
+
+pthread_mutex_t lock[NBUCKET];
+
 struct entry {
   int key;
   int value;
@@ -39,7 +42,7 @@ static
 void put(int key, int value)
 {
   int i = key % NBUCKET;
-
+  pthread_mutex_lock(&lock[i]);
   // is the key already present?
   struct entry *e = 0;
   for (e = table[i]; e != 0; e = e->next) {
@@ -53,6 +56,7 @@ void put(int key, int value)
     // the new is new.
     insert(key, value, &table[i], table[i]);
   }
+      pthread_mutex_unlock(&lock[i]);
 }
 
 static struct entry*
@@ -76,7 +80,9 @@ put_thread(void *xa)
   int b = NKEYS/nthread;
 
   for (int i = 0; i < b; i++) {
+    
     put(keys[b*n + i], n);
+
   }
 
   return NULL;
@@ -130,6 +136,10 @@ main(int argc, char *argv[])
   printf("%d puts, %.3f seconds, %.0f puts/second\n",
          NKEYS, t1 - t0, NKEYS / (t1 - t0));
 
+  for(int i = 0 ; i < NBUCKET ;i++){
+    pthread_mutex_init(&lock[i], NULL);
+  }
+  
   //
   // now the gets
   //
