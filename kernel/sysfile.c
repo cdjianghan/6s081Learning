@@ -16,6 +16,8 @@
 #include "file.h"
 #include "fcntl.h"
 
+
+
 // Fetch the nth word-sized system call argument as a file descriptor
 // and return both the descriptor and the corresponding struct file.
 static int
@@ -482,5 +484,55 @@ sys_pipe(void)
     fileclose(wf);
     return -1;
   }
+  return 0;
+}
+
+uint64
+sys_mmap(void){
+  uint64 addr;
+  int length,prot,flags,fd,offset;
+  struct file* file;
+  if(argaddr(0,&addr)<0||argint(1, &length) < 0||argint(2, &prot) < 0||argint(3, &flags) < 0
+  ||argfd(4, &fd,&file) < 0||argint(5, &offset) < 0){
+    return 0xffffffffffffffff;
+  }
+
+  if(!file->writable&&(prot&O_WRONLY)&&(flags&MAP_SHARED))
+    return 0xffffffffffffffff;
+
+  struct proc * p = myproc();
+  //maddr用于作为返回地址
+  int maddr;
+  maddr = p->sz;
+  // p->sz += length;
+  if(p->sz > MAXVA - 2*PGSIZE)
+    return 0xffffffffffffffff;
+  //选一个没用过的vma  
+  for(int i = 0 ; i < MAXVMA ; i ++){
+    struct VMA *vma = p->vmas[i];
+    if(vma->used == 0){
+      vma->used = 1;
+      vma->addr = maddr;
+      vma->len  = length;
+      vma->prot = prot;
+      vma->flags = flags;
+      vma->f = file;
+      filedup(file);
+      vma->start_point = offset;
+      return vma->addr;
+    }
+    if(i == MAXVMA - 1)
+      return 0xffffffffffffffff;
+    //所有vma都用完了报错
+  }
+
+
+  //对vma进行初始化
+
+  return 0xffffffffffffffff;
+}
+
+uint64
+sys_munmap(void){
   return 0;
 }

@@ -26,6 +26,20 @@ struct cpu {
   int intena;                 // Were interrupts enabled before push_off()?
 };
 
+
+#define MAXVMA 16
+
+struct VMA
+{
+   int used;   // if this vma is used or 	
+   uint64 addr;//address
+   uint64 len; //length
+   int prot;   //permissions 
+   int flags;  // flags
+   struct file *f; //the file being mapped
+   uint64 start_point;//starting piont in the file at which to map	 
+};
+
 extern struct cpu cpus[NCPU];
 
 // per-process data for the trap handling code in trampoline.S.
@@ -98,9 +112,12 @@ struct proc {
   uint64 kstack;               // Virtual address of kernel stack
   uint64 sz;                   // Size of process memory (bytes)
   pagetable_t pagetable;       // User page table
+  struct VMA *vmas[MAXVMA];    // VMA arrays
   struct trapframe *trapframe; // data page for trampoline.S
   struct context context;      // swtch() here to run process
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
 };
+
+
