@@ -43,7 +43,7 @@ freerange(void *pa_start, void *pa_end)
   }
 }
 
-
+//(+)
 void
 incref(uint64 pa){
   uint64 pn = pa / PGSIZE;
@@ -69,6 +69,7 @@ kfree(void *pa)
 
   acquire(&kmem.lock);
   uint64 pn = (uint64)pa /PGSIZE;
+  //(+)
   if(refcount[pn] < 1){
     panic("kfree ref");}
   refcount[pn] -= 1;
@@ -102,6 +103,7 @@ kalloc(void)
   acquire(&kmem.lock);
   r = kmem.freelist;
   if(r){
+    //(+)
         kmem.freelist = r->next;
         uint64 pn = (uint64)r / PGSIZE;
         if(refcount[pn] != 0)
