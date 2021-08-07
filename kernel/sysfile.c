@@ -165,6 +165,8 @@ bad:
   return -1;
 }
 
+
+
 // Is the directory dp empty except for "." and ".." ?
 static int
 isdirempty(struct inode *dp)
@@ -283,6 +285,37 @@ create(char *path, short type, short major, short minor)
   return ip;
 }
 
+//(+)symlink
+uint64 sys_symlink(void){
+  char target[MAXPATH],path[MAXPATH];
+  struct inode* dp,*ip;
+
+  if(argstr(0,target,MAXPATH) <0 || argstr(1,path,MAXPATH) < 0)
+    return -1;
+
+  begin_op();
+  //create a new inode
+  if((ip = namei(target)) != 0) {
+    if(ip -> type == T_DIR) {
+      goto bad;
+    }
+  }
+  if((dp = create(path, T_SYMLINK,0,0)) == 0) {
+    goto bad;
+  }
+  if(writei(dp,0,(uint64)target,0,MAXPATH) != MAXPATH){
+    panic("symlink: writei");
+  }
+  iunlockput(dp);
+  end_op();
+  return 0;
+
+  bad:
+  end_op();
+  return -1;  
+
+}
+
 uint64
 sys_open(void)
 {
@@ -291,6 +324,8 @@ sys_open(void)
   struct file *f;
   struct inode *ip;
   int n;
+    //(+)
+  struct inode *dp;
 
   if((n = argstr(0, path, MAXPATH)) < 0 || argint(1, &omode) < 0)
     return -1;
@@ -314,8 +349,33 @@ sys_open(void)
       end_op();
       return -1;
     }
-  }
 
+    //(+) no perfect
+    if(omode & O_NOFOLLOW) {
+    int i = 0;
+    for(;i < 10 && ip->type == T_SYMLINK;++i){
+      if(readi(ip, 0, (uint64)path,0,MAXPATH) == 0) {
+        iunlockput(ip);
+        end_op();
+        return -1;
+      }
+      if( (dp = namei(path)) == 0) {
+        iunlockput(ip);
+        end_op();
+        return -1;
+      }
+      iunlockput(ip);
+      ip = dp;
+      ilock(ip);
+    }
+    if(i == 10){
+      iunlockput(ip);
+      end_op();
+      return -1;
+    }
+  }
+}
+  
   if(ip->type == T_DEVICE && (ip->major < 0 || ip->major >= NDEV)){
     iunlockput(ip);
     end_op();
